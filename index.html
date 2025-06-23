@@ -1,51 +1,452 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>UV Proxy</title>
-  <base href="/gova-search/">
-  <script src="uv/uv.bundle.js" defer></script>
-  <style>
-    body {
-      font-family: sans-serif;
-      padding: 2rem;
-      background: #111;
-      color: #eee;
-      text-align: center;
-    }
-    input, button {
-      padding: 0.5rem;
-      font-size: 1rem;
-      margin-top: 1rem;
-      width: 80%;
-      max-width: 400px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UV Proxy Browser</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .url-bar {
+            flex: 1;
+            display: flex;
+            gap: 0.5rem;
+            max-width: 800px;
+        }
+
+        .url-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: none;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.9);
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .url-input:focus {
+            background: white;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+        }
+
+        .go-btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 25px;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .go-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .control-btn {
+            padding: 0.5rem;
+            border: none;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .welcome-screen {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: white;
+            padding: 2rem;
+        }
+
+        .welcome-title {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            animation: fadeInUp 1s ease;
+        }
+
+        .welcome-subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-bottom: 2rem;
+            animation: fadeInUp 1s ease 0.2s both;
+        }
+
+        .proxy-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: white;
+            display: none;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 1.2rem;
+            display: none;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .quick-links {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .quick-link {
+            padding: 0.75rem 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
+            color: white;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .quick-link:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .status-bar {
+            background: rgba(0, 0, 0, 0.1);
+            padding: 0.5rem 1rem;
+            color: white;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .url-bar {
+                width: 100%;
+                max-width: none;
+            }
+            
+            .welcome-title {
+                font-size: 2rem;
+            }
+            
+            .quick-links {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
 </head>
 <body>
-  <h1>Ultraviolet Proxy</h1>
-  <form id="uv-form">
-    <input id="uv-address" type="text" placeholder="Enter URL or search..." autocomplete="off" />
-    <br />
-    <button type="submit">Browse</button>
-  </form>
+    <div class="header">
+        <div class="logo">🌐 UV Browser</div>
+        <div class="url-bar">
+            <input type="text" class="url-input" placeholder="Enter URL or search term..." id="urlInput">
+            <button class="go-btn" onclick="navigate()">Go</button>
+        </div>
+        <div class="controls">
+            <button class="control-btn" onclick="goBack()" title="Back">←</button>
+            <button class="control-btn" onclick="goForward()" title="Forward">→</button>
+            <button class="control-btn" onclick="refresh()" title="Refresh">↻</button>
+            <button class="control-btn" onclick="goHome()" title="Home">🏠</button>
+        </div>
+    </div>
 
-  <script>
-    const form = document.getElementById('uv-form');
-    const input = document.getElementById('uv-address');
+    <div class="main-content">
+        <div class="welcome-screen" id="welcomeScreen">
+            <h1 class="welcome-title">Welcome to UV Browser</h1>
+            <p class="welcome-subtitle">Browse the web securely through our proxy</p>
+            <div class="quick-links">
+                <a href="#" class="quick-link" onclick="quickNavigate('google.com')">Google</a>
+                <a href="#" class="quick-link" onclick="quickNavigate('youtube.com')">YouTube</a>
+                <a href="#" class="quick-link" onclick="quickNavigate('github.com')">GitHub</a>
+                <a href="#" class="quick-link" onclick="quickNavigate('reddit.com')">Reddit</a>
+                <a href="#" class="quick-link" onclick="quickNavigate('wikipedia.org')">Wikipedia</a>
+            </div>
+        </div>
 
-    form.addEventListener('submit', (event) => {
-      event.preventDefault();
-      const url = input.value.trim();
-      if (!url) return;
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div>Loading...</div>
+        </div>
 
-      let finalUrl = Ultraviolet.codec.xor.encode(
-        Ultraviolet.search(url)
-      );
+        <iframe class="proxy-iframe" id="proxyFrame"></iframe>
+    </div>
 
-      window.location.href = __uv$config.prefix + finalUrl;
-    });
-  </script>
+    <div class="status-bar" id="statusBar">
+        Ready
+    </div>
+
+    <script src="uv/uv.bundle.js"></script>
+    <script>
+        // UV Configuration
+        const uvConfig = {
+            prefix: '/uv/service/',
+            bare: '/bare/',
+            encodeUrl: Ultraviolet.codec.xor.encode,
+            decodeUrl: Ultraviolet.codec.xor.decode,
+            handler: '/uv/uv.handler.js',
+            bundle: '/uv/uv.bundle.js',
+            config: '/uv/uv.config.js',
+            sw: '/uv/uv.sw.js',
+        };
+
+        // Register Service Worker
+        async function registerSW() {
+            try {
+                if ('serviceWorker' in navigator) {
+                    await navigator.serviceWorker.register('/uv/uv.sw.js', {
+                        scope: '/uv/service/'
+                    });
+                    console.log('Service Worker registered successfully');
+                    updateStatus('Service Worker ready');
+                } else {
+                    throw new Error('Service Workers not supported');
+                }
+            } catch (error) {
+                console.error('Service Worker registration failed:', error);
+                updateStatus('Service Worker failed to register');
+                alert('This browser proxy requires Service Worker support. Please use a modern browser.');
+            }
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            registerSW();
+            
+            // Handle Enter key in URL input
+            document.getElementById('urlInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    navigate();
+                }
+            });
+        });
+
+        function updateStatus(message) {
+            const statusBar = document.getElementById('statusBar');
+            statusBar.textContent = message;
+            statusBar.style.display = 'block';
+            setTimeout(() => {
+                statusBar.style.display = 'none';
+            }, 3000);
+        }
+
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('welcomeScreen').style.display = 'none';
+            document.getElementById('proxyFrame').style.display = 'none';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function showFrame() {
+            document.getElementById('proxyFrame').style.display = 'block';
+            document.getElementById('welcomeScreen').style.display = 'none';
+            hideLoading();
+        }
+
+        function showWelcome() {
+            document.getElementById('welcomeScreen').style.display = 'flex';
+            document.getElementById('proxyFrame').style.display = 'none';
+            hideLoading();
+        }
+
+        function formatUrl(input) {
+            if (!input) return '';
+            
+            // If it looks like a search query, use Google
+            if (!input.includes('.') || input.includes(' ')) {
+                return `https://www.google.com/search?q=${encodeURIComponent(input)}`;
+            }
+            
+            // Add protocol if missing
+            if (!input.startsWith('http://') && !input.startsWith('https://')) {
+                return `https://${input}`;
+            }
+            
+            return input;
+        }
+
+        async function navigate() {
+            const urlInput = document.getElementById('urlInput');
+            const url = formatUrl(urlInput.value.trim());
+            
+            if (!url) {
+                alert('Please enter a valid URL or search term');
+                return;
+            }
+
+            try {
+                showLoading();
+                updateStatus('Connecting...');
+                
+                // Encode URL for UV
+                const encodedUrl = uvConfig.encodeUrl(url);
+                const proxyUrl = `${uvConfig.prefix}${encodedUrl}`;
+                
+                // Load in iframe
+                const frame = document.getElementById('proxyFrame');
+                frame.src = proxyUrl;
+                
+                // Handle frame load
+                frame.onload = () => {
+                    showFrame();
+                    updateStatus(`Loaded: ${url}`);
+                    urlInput.value = url;
+                };
+                
+                frame.onerror = () => {
+                    hideLoading();
+                    updateStatus('Failed to load page');
+                    alert('Failed to load the page. Please check the URL and try again.');
+                };
+                
+            } catch (error) {
+                console.error('Navigation error:', error);
+                hideLoading();
+                updateStatus('Navigation failed');
+                alert('An error occurred while loading the page.');
+            }
+        }
+
+        function quickNavigate(url) {
+            document.getElementById('urlInput').value = url;
+            navigate();
+        }
+
+        function goBack() {
+            const frame = document.getElementById('proxyFrame');
+            if (frame.contentWindow) {
+                frame.contentWindow.history.back();
+            }
+        }
+
+        function goForward() {
+            const frame = document.getElementById('proxyFrame');
+            if (frame.contentWindow) {
+                frame.contentWindow.history.forward();
+            }
+        }
+
+        function refresh() {
+            const frame = document.getElementById('proxyFrame');
+            if (frame.src) {
+                frame.src = frame.src;
+                updateStatus('Refreshing...');
+            }
+        }
+
+        function goHome() {
+            const frame = document.getElementById('proxyFrame');
+            frame.src = '';
+            document.getElementById('urlInput').value = '';
+            showWelcome();
+            updateStatus('Home');
+        }
+
+        // Handle iframe communication
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'url-change') {
+                const decodedUrl = uvConfig.decodeUrl(event.data.url);
+                document.getElementById('urlInput').value = decodedUrl;
+                updateStatus(`Navigated to: ${decodedUrl}`);
+            }
+        });
+    </script>
 </body>
 </html>
