@@ -208,6 +208,36 @@
             display: none;
         }
 
+        .debug-panel {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            max-width: 300px;
+            z-index: 1000;
+            display: none;
+        }
+
+        .debug-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            z-index: 1001;
+        }
+
         @media (max-width: 768px) {
             .header {
                 flex-direction: column;
@@ -270,42 +300,117 @@
         Ready
     </div>
 
+    <div class="debug-panel" id="debugPanel">
+        <div><strong>Debug Info:</strong></div>
+        <div id="debugInfo">Initializing...</div>
+    </div>
+
+    <button class="debug-toggle" onclick="toggleDebug()" title="Toggle Debug">🔧</button>
+
     <script src="uv/uv.bundle.js"></script>
     <script>
-        // UV Configuration
-        const uvConfig = {
+        // Check if UV bundle loaded
+        if (typeof Ultraviolet === 'undefined') {
+            alert('Ultraviolet bundle failed to load. Please check that uv/uv.bundle.js exists and is accessible.');
+        }
+
+        // UV Configuration - Load from config file or use defaults
+        let uvConfig = {
             prefix: '/uv/service/',
             bare: '/bare/',
-            encodeUrl: Ultraviolet.codec.xor.encode,
-            decodeUrl: Ultraviolet.codec.xor.decode,
+            encodeUrl: (url) => {
+                if (typeof Ultraviolet !== 'undefined' && Ultraviolet.codec && Ultraviolet.codec.xor) {
+                    return Ultraviolet.codec.xor.encode(url);
+                }
+                // Fallback encoding
+                return btoa(url).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+            },
+            decodeUrl: (url) => {
+                if (typeof Ultraviolet !== 'undefined' && Ultraviolet.codec && Ultraviolet.codec.xor) {
+                    return Ultraviolet.codec.xor.decode(url);
+                }
+                // Fallback decoding
+                try {
+                    return atob(url.replace(/-/g, '+').replace(/_/g, '/'));
+                } catch (e) {
+                    return url;
+                }
+            },
             handler: '/uv/uv.handler.js',
             bundle: '/uv/uv.bundle.js',
             config: '/uv/uv.config.js',
             sw: '/uv/uv.sw.js',
         };
 
+        // Try to load UV config from file
+        fetch('uv/uv.config.json')
+            .then(response => response.json())
+            .then(config => {
+                uvConfig = { ...uvConfig, ...config };
+                console.log('UV Config loaded:', uvConfig);
+            })
+            .catch(error => {
+                console.warn('Could not load uv.config.json, using defaults:', error);
+            });
+
         // Register Service Worker
         async function registerSW() {
             try {
-                if ('serviceWorker' in navigator) {
-                    await navigator.serviceWorker.register('/uv/uv.sw.js', {
-                        scope: '/uv/service/'
-                    });
-                    console.log('Service Worker registered successfully');
-                    updateStatus('Service Worker ready');
-                } else {
-                    throw new Error('Service Workers not supported');
+                if (!('serviceWorker' in navigator)) {
+                    throw new Error('Service Workers not supported in this browser');
                 }
+
+                // Check if SW file exists
+                const swResponse = await fetch('/uv/uv.sw.js');
+                if (!swResponse.ok) {
+                    throw new Error(`Service Worker file not found: ${swResponse.status}`);
+                }
+
+                const registration = await navigator.serviceWorker.register('/uv/uv.sw.js', {
+                    scope: '/uv/service/'
+                });
+
+                console.log('Service Worker registered successfully:', registration);
+                
+                // Wait for SW to be ready
+                if (registration.installing) {
+                    console.log('Service Worker installing...');
+                    await new Promise(resolve => {
+                        registration.installing.addEventListener('statechange', () => {
+                            if (registration.installing.state === 'installed') {
+                                resolve();
+                            }
+                        });
+                    });
+                }
+
+                if (registration.active) {
+                    console.log('Service Worker is active');
+                    updateStatus('Proxy ready');
+                } else if (registration.waiting) {
+                    console.log('Service Worker is waiting');
+                    updateStatus('Proxy ready (waiting)');
+                }
+
+                return registration;
             } catch (error) {
                 console.error('Service Worker registration failed:', error);
-                updateStatus('Service Worker failed to register');
-                alert('This browser proxy requires Service Worker support. Please use a modern browser.');
+                updateStatus(`SW Error: ${error.message}`);
+                alert(`Service Worker Error: ${error.message}\n\nPlease ensure:\n1. Files are served via HTTP/HTTPS (not file://)\n2. uv/uv.sw.js exists\n3. Using a modern browser`);
+                throw error;
             }
         }
 
         // Initialize on page load
-        window.addEventListener('load', () => {
-            registerSW();
+        window.addEventListener('load', async () => {
+            updateDebug('Page loaded, initializing...');
+            
+            try {
+                await registerSW();
+                updateDebug('Service Worker registered successfully');
+            } catch (error) {
+                updateDebug(`SW registration failed: ${error.message}`);
+            }
             
             // Handle Enter key in URL input
             document.getElementById('urlInput').addEventListener('keypress', (e) => {
@@ -313,6 +418,9 @@
                     navigate();
                 }
             });
+
+            // Run diagnostics
+            runDiagnostics();
         });
 
         function updateStatus(message) {
@@ -375,32 +483,74 @@
                 showLoading();
                 updateStatus('Connecting...');
                 
-                // Encode URL for UV
-                const encodedUrl = uvConfig.encodeUrl(url);
+                console.log('Navigating to:', url);
+                
+                // Check if service worker is ready
+                if (!navigator.serviceWorker.controller) {
+                    throw new Error('Service Worker not ready. Please refresh the page and try again.');
+                }
+                
+                // Test UV encoding
+                let encodedUrl;
+                try {
+                    encodedUrl = uvConfig.encodeUrl(url);
+                    console.log('Encoded URL:', encodedUrl);
+                } catch (encodeError) {
+                    console.error('URL encoding failed:', encodeError);
+                    throw new Error('Failed to encode URL');
+                }
+                
                 const proxyUrl = `${uvConfig.prefix}${encodedUrl}`;
+                console.log('Proxy URL:', proxyUrl);
+                
+                // Test if proxy endpoint responds
+                try {
+                    const testResponse = await fetch(proxyUrl, { method: 'HEAD' });
+                    console.log('Proxy test response:', testResponse.status);
+                } catch (fetchError) {
+                    console.warn('Proxy test failed:', fetchError);
+                }
                 
                 // Load in iframe
                 const frame = document.getElementById('proxyFrame');
-                frame.src = proxyUrl;
                 
-                // Handle frame load
+                // Set up frame event handlers before setting src
                 frame.onload = () => {
+                    console.log('Frame loaded successfully');
                     showFrame();
                     updateStatus(`Loaded: ${url}`);
                     urlInput.value = url;
                 };
                 
-                frame.onerror = () => {
+                frame.onerror = (error) => {
+                    console.error('Frame error:', error);
                     hideLoading();
                     updateStatus('Failed to load page');
-                    alert('Failed to load the page. Please check the URL and try again.');
+                    alert('Failed to load the page. Please check the console for details.');
                 };
+                
+                // Add timeout for loading
+                const timeout = setTimeout(() => {
+                    hideLoading();
+                    updateStatus('Loading timeout');
+                    alert('Page loading timed out. The website may be blocked or slow to respond.');
+                }, 30000);
+                
+                frame.onload = () => {
+                    clearTimeout(timeout);
+                    console.log('Frame loaded successfully');
+                    showFrame();
+                    updateStatus(`Loaded: ${url}`);
+                    urlInput.value = url;
+                };
+                
+                frame.src = proxyUrl;
                 
             } catch (error) {
                 console.error('Navigation error:', error);
                 hideLoading();
-                updateStatus('Navigation failed');
-                alert('An error occurred while loading the page.');
+                updateStatus(`Navigation failed: ${error.message}`);
+                alert(`Navigation Error: ${error.message}\n\nPlease check:\n1. Service Worker is registered\n2. UV files are properly loaded\n3. Website allows embedding`);
             }
         }
 
@@ -447,6 +597,38 @@
                 updateStatus(`Navigated to: ${decodedUrl}`);
             }
         });
+
+        // Debug functions
+        function updateDebug(message) {
+            const debugInfo = document.getElementById('debugInfo');
+            const timestamp = new Date().toLocaleTimeString();
+            debugInfo.innerHTML += `<br>[${timestamp}] ${message}`;
+            debugInfo.scrollTop = debugInfo.scrollHeight;
+            console.log(`[UV Debug] ${message}`);
+        }
+
+        function toggleDebug() {
+            const debugPanel = document.getElementById('debugPanel');
+            debugPanel.style.display = debugPanel.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function runDiagnostics() {
+            const diagnostics = [];
+            
+            // Check UV bundle
+            diagnostics.push(`UV Bundle: ${typeof Ultraviolet !== 'undefined' ? '✓ Loaded' : '✗ Missing'}`);
+            
+            // Check Service Worker support
+            diagnostics.push(`Service Worker: ${('serviceWorker' in navigator) ? '✓ Supported' : '✗ Not supported'}`);
+            
+            // Check current protocol
+            diagnostics.push(`Protocol: ${location.protocol} ${location.protocol === 'file:' ? '⚠ Use HTTP/HTTPS' : '✓'}`);
+            
+            // Check if running on localhost/server
+            diagnostics.push(`Host: ${location.host || 'file://'}`);
+            
+            updateDebug('Diagnostics:\n' + diagnostics.join('\n'));
+        }
     </script>
 </body>
 </html>
