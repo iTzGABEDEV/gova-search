@@ -1,550 +1,139 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gova Search - Web Proxy</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="UTF-8">
+  <title>Gova Proxy</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      background: #121212;
+      color: white;
+      font-family: sans-serif;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
+    header {
+      padding: 1rem;
+      background: #222;
+      display: flex;
+      gap: 1rem;
+    }
 
-        .header {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
+    input {
+      flex: 1;
+      padding: 0.5rem;
+      border-radius: 5px;
+      border: none;
+    }
 
-        .logo {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: white;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-        }
+    button {
+      padding: 0.5rem 1rem;
+      background: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
 
-        .url-bar {
-            flex: 1;
-            display: flex;
-            gap: 0.5rem;
-            min-width: 300px;
-        }
+    iframe {
+      flex: 1;
+      border: none;
+      width: 100%;
+    }
 
-        .url-input {
-            flex: 1;
-            padding: 0.75rem 1rem;
-            border: none;
-            border-radius: 25px;
-            background: rgba(255, 255, 255, 0.9);
-            font-size: 1rem;
-            outline: none;
-            transition: all 0.3s ease;
-        }
-
-        .url-input:focus {
-            background: white;
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
-        }
-
-        .go-btn {
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: 25px;
-            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .go-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-
-        .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-        }
-
-        .welcome-screen {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            color: white;
-            padding: 2rem;
-        }
-
-        .welcome-title {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-        }
-
-        .welcome-subtitle {
-            font-size: 1.2rem;
-            opacity: 0.9;
-            margin-bottom: 2rem;
-        }
-
-        .proxy-iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-            background: white;
-            display: none;
-        }
-
-        .loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
-            font-size: 1.2rem;
-            text-align: center;
-            display: none;
-        }
-
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-top: 4px solid white;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 1rem;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .quick-links {
-            display: flex;
-            gap: 1rem;
-            margin-top: 2rem;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-
-        .quick-link {
-            padding: 0.75rem 1.5rem;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 25px;
-            color: white;
-            text-decoration: none;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-
-        .quick-link:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
-        }
-
-        .status {
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 1rem;
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
-            border-radius: 10px;
-            font-size: 0.9rem;
-            display: none;
-            z-index: 1000;
-            text-align: center;
-        }
-
-        .error {
-            background: rgba(220, 53, 69, 0.9);
-        }
-
-        .success {
-            background: rgba(40, 167, 69, 0.9);
-        }
-
-        .warning {
-            background: rgba(255, 193, 7, 0.9);
-            color: #000;
-        }
-
-        .github-pages-notice {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
-            padding: 1rem;
-            margin: 1rem;
-            color: white;
-            font-size: 0.9rem;
-        }
-
-        .setup-instructions {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            padding: 1.5rem;
-            margin: 1rem 0;
-            color: white;
-        }
-
-        .setup-instructions h3 {
-            margin-bottom: 1rem;
-            color: #ffd700;
-        }
-
-        .setup-instructions ol {
-            padding-left: 1.5rem;
-        }
-
-        .setup-instructions li {
-            margin-bottom: 0.5rem;
-        }
-
-        .setup-instructions code {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 0.2rem 0.4rem;
-            border-radius: 3px;
-            font-family: monospace;
-        }
-
-        @media (max-width: 768px) {
-            .header {
-                flex-direction: column;
-                gap: 1rem;
-            }
-            
-            .url-bar {
-                width: 100%;
-                min-width: auto;
-            }
-            
-            .welcome-title {
-                font-size: 2rem;
-            }
-        }
-    </style>
+    #status {
+      text-align: center;
+      padding: 0.5rem;
+      background: #333;
+    }
+  </style>
 </head>
 <body>
-    <div class="header">
-        <div class="logo">🌐 Gova Search</div>
-        <div class="url-bar">
-            <input type="text" class="url-input" placeholder="Enter URL or search..." id="urlInput">
-            <button class="go-btn" onclick="navigate()">Go</button>
-        </div>
-    </div>
+  <header>
+    <input type="text" id="urlInput" placeholder="Enter URL or search..." />
+    <button onclick="navigate()">Go</button>
+  </header>
 
-    <div class="main-content">
-        <div class="welcome-screen" id="welcomeScreen">
-            <h1 class="welcome-title">Gova Search</h1>
-            <p class="welcome-subtitle">Web Proxy Browser</p>
-            
-            <div class="github-pages-notice">
-                ⚠️ <strong>GitHub Pages Setup Required</strong><br>
-                This proxy requires additional setup to work on GitHub Pages.
-            </div>
+  <div id="status">Loading UV bundle...</div>
+  <iframe id="proxyFrame" style="display:none;"></iframe>
 
-            <div class="setup-instructions">
-                <h3>🛠️ Setup Instructions</h3>
-                <ol>
-                    <li>Download Ultraviolet files from <a href="https://github.com/titaniumnetwork-dev/Ultraviolet" target="_blank" style="color: #ffd700;">GitHub</a></li>
-                    <li>Create a <code>uv/</code> folder in your repository</li>
-                    <li>Add these files to the <code>uv/</code> folder:
-                        <ul>
-                            <li><code>uv.bundle.js</code></li>
-                            <li><code>uv.sw.js</code></li>
-                            <li><code>uv.config.js</code></li>
-                            <li><code>uv.handler.js</code></li>
-                        </ul>
-                    </li>
-                    <li>Set up a bare server or use a public one</li>
-                    <li>Update your <code>uv.config.js</code> with the bare server URL</li>
-                </ol>
-            </div>
+  <script>
+    let swReady = false;
 
-            <div class="quick-links">
-                <div class="quick-link" onclick="quickNavigate('google.com')">Google</div>
-                <div class="quick-link" onclick="quickNavigate('youtube.com')">YouTube</div>
-                <div class="quick-link" onclick="quickNavigate('github.com')">GitHub</div>
-                <div class="quick-link" onclick="quickNavigate('reddit.com')">Reddit</div>
-            </div>
-        </div>
+    function formatUrl(input) {
+      if (!input.includes('.') || input.includes(' ')) {
+        return `https://www.google.com/search?q=${encodeURIComponent(input)}`;
+      }
+      if (!input.startsWith('http')) {
+        return 'https://' + input;
+      }
+      return input;
+    }
 
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <div>Loading website...</div>
-        </div>
-
-        <iframe class="proxy-iframe" id="proxyFrame"></iframe>
-    </div>
-
-    <div class="status" id="status"></div>
-
-    <script>
-        let swReady = false;
-        let uvLoaded = false;
-        
-        function showStatus(message, type = '', duration = 5000) {
-            const status = document.getElementById('status');
-            status.textContent = message;
-            status.className = `status ${type}`;
-            status.style.display = 'block';
-            setTimeout(() => {
-                status.style.display = 'none';
-            }, duration);
-            console.log(`[Gova] ${message}`);
-        }
-
-        function showLoading() {
-            document.getElementById('loading').style.display = 'block';
-            document.getElementById('welcomeScreen').style.display = 'none';
-            document.getElementById('proxyFrame').style.display = 'none';
-        }
-
-        function hideLoading() {
-            document.getElementById('loading').style.display = 'none';
-        }
-
-        function showFrame() {
-            document.getElementById('proxyFrame').style.display = 'block';
-            document.getElementById('welcomeScreen').style.display = 'none';
-            hideLoading();
-        }
-
-        function showWelcome() {
-            document.getElementById('welcomeScreen').style.display = 'flex';
-            document.getElementById('proxyFrame').style.display = 'none';
-            hideLoading();
-        }
-
-        function formatUrl(input) {
-            if (!input) return '';
-            
-            // Check if it's a search query
-            if (!input.includes('.') || input.includes(' ')) {
-                return `https://www.google.com/search?q=${encodeURIComponent(input)}`;
-            }
-            
-            // Add https if no protocol
-            if (!input.startsWith('http://') && !input.startsWith('https://')) {
-                return `https://${input}`;
-            }
-            
-            return input;
-        }
-
-        // Fallback URL encoder
-        function encodeUrl(url) {
-            if (window.Ultraviolet && window.Ultraviolet.codec) {
-                return Ultraviolet.codec.xor.encode(url);
-            }
-            // Simple base64 encoding as fallback
-            return btoa(url).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-        }
-
-        async function checkSetup() {
-            const checks = [];
-            
-            // Check if UV bundle is loaded
-            try {
-                const response = await fetch('./uv/uv.bundle.js');
-                if (response.ok) {
-                    checks.push('✅ UV Bundle found');
-                } else {
-                    checks.push('❌ UV Bundle missing');
-                }
-            } catch (e) {
-                checks.push('❌ UV Bundle not accessible');
-            }
-
-            // Check if service worker exists
-            try {
-                const response = await fetch('./uv/uv.sw.js');
-                if (response.ok) {
-                    checks.push('✅ Service Worker found');
-                } else {
-                    checks.push('❌ Service Worker missing');
-                }
-            } catch (e) {
-                checks.push('❌ Service Worker not accessible');
-            }
-
-            // Check if config exists
-            try {
-                const response = await fetch('./uv/uv.config.js');
-                if (response.ok) {
-                    checks.push('✅ Config found');
-                } else {
-                    checks.push('❌ Config missing');
-                }
-            } catch (e) {
-                checks.push('❌ Config not accessible');
-            }
-
-            return checks;
-        }
-
-        async function navigate() {
-            const urlInput = document.getElementById('urlInput');
-            const rawUrl = urlInput.value.trim();
-            
-            if (!rawUrl) {
-                showStatus('Please enter a URL or search term', 'error');
-                return;
-            }
-
-            // Run setup check first
-            const setupResults = await checkSetup();
-            const hasErrors = setupResults.some(result => result.includes('❌'));
-            
-            if (hasErrors) {
-                showStatus('Setup incomplete: ' + setupResults.join(' | '), 'error', 8000);
-                return;
-            }
-
-            const url = formatUrl(rawUrl);
-            console.log('Navigating to:', url);
-
-            try {
-                showLoading();
-                showStatus('Initializing proxy...');
-
-                // Check service worker support
-                if (!navigator.serviceWorker) {
-                    throw new Error('Service Worker not supported. Please use a modern browser.');
-                }
-
-                // Register service worker if not ready
-                if (!swReady) {
-                    showStatus('Setting up proxy service...');
-                    await registerServiceWorker();
-                }
-
-                // Encode URL
-                const encodedUrl = encodeUrl(url);
-                const proxyUrl = `./uv/service/${encodedUrl}`;
-                
-                console.log('Proxy URL:', proxyUrl);
-                showStatus('Loading website...');
-
-                const frame = document.getElementById('proxyFrame');
-                
-                // Set up timeout
-                const loadTimeout = setTimeout(() => {
-                    hideLoading();
-                    showStatus('Loading timeout. The website may be slow or blocked.', 'warning');
-                }, 20000);
-
-                frame.onload = function() {
-                    clearTimeout(loadTimeout);
-                    showFrame();
-                    showStatus(`Successfully loaded: ${rawUrl}`, 'success');
-                    urlInput.value = rawUrl;
-                };
-
-                frame.onerror = function() {
-                    clearTimeout(loadTimeout);
-                    hideLoading();
-                    showStatus('Failed to load website. It may block embedding or be unavailable.', 'error');
-                };
-
-                // Load the URL
-                frame.src = proxyUrl;
-
-            } catch (error) {
-                console.error('Navigation error:', error);
-                hideLoading();
-                showStatus(`Error: ${error.message}`, 'error');
-            }
-        }
-
-        async function registerServiceWorker() {
-            try {
-                showStatus('Registering service worker...');
-                
-                const registration = await navigator.serviceWorker.register('./uv/uv.sw.js', {
-                    scope: './uv/service/'
-                });
-
-                // Wait for service worker to be ready
-                await navigator.serviceWorker.ready;
-                
-                swReady = true;
-                showStatus('Proxy service ready!', 'success');
-                
-                return registration;
-            } catch (error) {
-                console.error('Service worker registration failed:', error);
-                throw new Error(`Proxy setup failed: ${error.message}`);
-            }
-        }
-
-        function quickNavigate(url) {
-            document.getElementById('urlInput').value = url;
-            navigate();
-        }
-
-        // Initialize
-        window.addEventListener('load', async () => {
-            // Handle Enter key
-            document.getElementById('urlInput').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    navigate();
-                }
-            });
-
-            // Check setup status
-            const setupResults = await checkSetup();
-            const hasErrors = setupResults.some(result => result.includes('❌'));
-            
-            if (hasErrors) {
-                showStatus('Setup required: ' + setupResults.join(' | '), 'warning', 10000);
-            } else {
-                showStatus('All files found! Proxy ready to use.', 'success');
-                // Try to register service worker
-                try {
-                    await registerServiceWorker();
-                } catch (error) {
-                    showStatus('Service worker setup failed', 'error');
-                }
-            }
+    async function registerSW() {
+      try {
+        const reg = await navigator.serviceWorker.register('/gova-search/uv/uv.sw.js', {
+          scope: '/gova-search/uv/service/'
         });
+        await navigator.serviceWorker.ready;
+        swReady = true;
+        showStatus('Service Worker ready ✅');
+      } catch (e) {
+        console.error(e);
+        showStatus('❌ Service Worker setup failed: ' + e.message);
+      }
+    }
 
-        // Try to load UV bundle
-        const uvScript = document.createElement('script');
-        uvScript.src = './uv/uv.bundle.js';
-        uvScript.onload = () => {
-            uvLoaded = true;
-            console.log('UV bundle loaded successfully');
-            showStatus('UV bundle loaded successfully', 'success');
-        };
-        uvScript.onerror = () => {
-            console.warn('UV bundle not found');
-            showStatus('UV bundle not found - please complete setup', 'warning');
-        };
-        document.head.appendChild(uvScript);
-    </script>
+    function showStatus(text) {
+      document.getElementById('status').textContent = text;
+    }
+
+    async function navigate() {
+      const input = document.getElementById('urlInput').value.trim();
+      if (!input) return;
+
+      const fullUrl = formatUrl(input);
+
+      if (!swReady) {
+        showStatus('⏳ Waiting for service worker...');
+        return;
+      }
+
+      if (!window.Ultraviolet || !Ultraviolet.codec || !Ultraviolet.codec.xor) {
+        showStatus('❌ UV bundle not ready');
+        return;
+      }
+
+      const encoded = Ultraviolet.codec.xor.encode(fullUrl);
+      const proxyUrl = `/gova-search/uv/service/${encoded}`;
+
+      const iframe = document.getElementById('proxyFrame');
+      iframe.style.display = 'block';
+      iframe.src = proxyUrl;
+
+      showStatus(`Loading: ${fullUrl}`);
+    }
+
+    // Load UV bundle
+    const script = document.createElement('script');
+    script.src = '/gova-search/uv/uv.bundle.js';
+    script.onload = () => {
+      showStatus('✅ UV bundle loaded');
+    };
+    script.onerror = () => {
+      showStatus('❌ Failed to load UV bundle');
+    };
+    document.head.appendChild(script);
+
+    window.addEventListener('load', () => {
+      registerSW();
+      document.getElementById('urlInput').addEventListener('keypress', e => {
+        if (e.key === 'Enter') navigate();
+      });
+    });
+  </script>
 </body>
 </html>
