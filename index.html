@@ -1,14 +1,51 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>UV Proxy</title>
-    <script src="uv/uv.bundle.js" defer></script>
-  </head>
-  <body>
-    <h1>Ultraviolet Proxy</h1>
-    <form id="uv-form">
-      <input id="uv-address" type="text" placeholder="Enter URL or search" />
-      <button type="submit">Go</button>
-    </form>
-  </body>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UV Proxy</title>
+  <base href="/your-repo-name/">
+  <script src="uv/uv.bundle.js" defer></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 2rem;
+      background: #111;
+      color: #eee;
+      text-align: center;
+    }
+    input, button {
+      padding: 0.5rem;
+      font-size: 1rem;
+      margin-top: 1rem;
+      width: 80%;
+      max-width: 400px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Ultraviolet Proxy</h1>
+  <form id="uv-form">
+    <input id="uv-address" type="text" placeholder="Enter URL or search..." autocomplete="off" />
+    <br />
+    <button type="submit">Browse</button>
+  </form>
+
+  <script>
+    const form = document.getElementById('uv-form');
+    const input = document.getElementById('uv-address');
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const url = input.value.trim();
+      if (!url) return;
+
+      let finalUrl = Ultraviolet.codec.xor.encode(
+        Ultraviolet.search(url)
+      );
+
+      window.location.href = __uv$config.prefix + finalUrl;
+    });
+  </script>
+</body>
 </html>
