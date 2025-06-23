@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>UV Proxy</title>
+</head>
+<body>
+  <h1>Ultraviolet Proxy</h1>
+  <form id="proxyForm">
+    <input type="text" id="urlInput" placeholder="https://poki.com" style="width:80%">
+    <button type="submit">Go</button>
+  </form>
+  <script src="/uv/uv.bundle.js"></script>
+  <script src="/uv/uv.config.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/uv/uv.sw.js');
+    }
+    document.getElementById('proxyForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const url = document.getElementById('urlInput').value;
+      location.href = __uv$config.prefix + __uv$config.encodeUrl(url);
+    });
+  </script>
+</body>
+</html>
