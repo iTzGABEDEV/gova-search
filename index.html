@@ -1,139 +1,29 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Gova Proxy</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body {
-      background: #121212;
-      color: white;
-      font-family: sans-serif;
-      margin: 0;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
-
-    header {
-      padding: 1rem;
-      background: #222;
-      display: flex;
-      gap: 1rem;
-    }
-
-    input {
-      flex: 1;
-      padding: 0.5rem;
-      border-radius: 5px;
-      border: none;
-    }
-
-    button {
-      padding: 0.5rem 1rem;
-      background: #4caf50;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    iframe {
-      flex: 1;
-      border: none;
-      width: 100%;
-    }
-
-    #status {
-      text-align: center;
-      padding: 0.5rem;
-      background: #333;
-    }
-  </style>
+    <title>UV Proxy</title>
+    <script src="/uv/uv.bundle.js"></script>
+    <script src="/uv/uv.config.js"></script>
 </head>
 <body>
-  <header>
-    <input type="text" id="urlInput" placeholder="Enter URL or search..." />
+    <h1>UV Proxy</h1>
+    <input type="text" id="url" placeholder="Enter URL">
     <button onclick="navigate()">Go</button>
-  </header>
+    <iframe id="frame" style="width:100%;height:80vh"></iframe>
 
-  <div id="status">Loading UV bundle...</div>
-  <iframe id="proxyFrame" style="display:none;"></iframe>
-
-  <script>
-    let swReady = false;
-
-    function formatUrl(input) {
-      if (!input.includes('.') || input.includes(' ')) {
-        return `https://www.google.com/search?q=${encodeURIComponent(input)}`;
-      }
-      if (!input.startsWith('http')) {
-        return 'https://' + input;
-      }
-      return input;
-    }
-
-    async function registerSW() {
-      try {
-        const reg = await navigator.serviceWorker.register('/gova-search/uv/uv.sw.js', {
-          scope: '/gova-search/uv/service/'
-        });
-        await navigator.serviceWorker.ready;
-        swReady = true;
-        showStatus('Service Worker ready ✅');
-      } catch (e) {
-        console.error(e);
-        showStatus('❌ Service Worker setup failed: ' + e.message);
-      }
-    }
-
-    function showStatus(text) {
-      document.getElementById('status').textContent = text;
-    }
-
-    async function navigate() {
-      const input = document.getElementById('urlInput').value.trim();
-      if (!input) return;
-
-      const fullUrl = formatUrl(input);
-
-      if (!swReady) {
-        showStatus('⏳ Waiting for service worker...');
-        return;
-      }
-
-      if (!window.Ultraviolet || !Ultraviolet.codec || !Ultraviolet.codec.xor) {
-        showStatus('❌ UV bundle not ready');
-        return;
-      }
-
-      const encoded = Ultraviolet.codec.xor.encode(fullUrl);
-      const proxyUrl = `/gova-search/uv/service/${encoded}`;
-
-      const iframe = document.getElementById('proxyFrame');
-      iframe.style.display = 'block';
-      iframe.src = proxyUrl;
-
-      showStatus(`Loading: ${fullUrl}`);
-    }
-
-    // Load UV bundle
-    const script = document.createElement('script');
-    script.src = '/gova-search/uv/uv.bundle.js';
-    script.onload = () => {
-      showStatus('✅ UV bundle loaded');
-    };
-    script.onerror = () => {
-      showStatus('❌ Failed to load UV bundle');
-    };
-    document.head.appendChild(script);
-
-    window.addEventListener('load', () => {
-      registerSW();
-      document.getElementById('urlInput').addEventListener('keypress', e => {
-        if (e.key === 'Enter') navigate();
-      });
-    });
-  </script>
+    <script>
+        function navigate() {
+            const url = document.getElementById('url').value;
+            const frame = document.getElementById('frame');
+            frame.src = __uv$config.prefix + __uv$config.encodeUrl(url);
+        }
+        
+        // Register service worker
+        if('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/uv/uv.sw.js', {
+                scope: __uv$config.prefix
+            });
+        }
+    </script>
 </body>
 </html>
